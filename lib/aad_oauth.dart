@@ -1,28 +1,30 @@
 library aad_oauth;
 
-import 'model/config.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'helper/auth_storage.dart';
+import 'model/config.dart';
 import 'model/token.dart';
 import 'request_code.dart';
 import 'request_token.dart';
-import 'dart:async';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Authenticates a user with Azure Active Directory using OAuth2.0.
 class AadOAuth {
-  static Config _config;
-  AuthStorage _authStorage;
-  RequestCode _requestCode;
-  RequestToken _requestToken;
+  static late Config _config;
+  final AuthStorage _authStorage;
+  final RequestCode _requestCode;
+  final RequestToken _requestToken;
 
   /// Instantiating AadOAuth authentication.
   /// [config] Parameters according to official Microsoft Documentation.
-  AadOAuth(Config config) {
+  AadOAuth(Config config)
+      : _authStorage = AuthStorage(tokenIdentifier: config.tokenIdentifier),
+        _requestCode = RequestCode(config),
+        _requestToken = RequestToken(config) {
     _config = config;
-    _authStorage = AuthStorage(tokenIdentifier: config.tokenIdentifier);
-    _requestCode = RequestCode(_config);
-    _requestToken = RequestToken(_config);
   }
 
   /// Set [screenSize] of webview.
@@ -46,11 +48,11 @@ class AadOAuth {
   }
 
   /// Retrieve cached OAuth Access Token.
-  Future<String> getAccessToken() async =>
+  Future<String?> getAccessToken() async =>
       (await _authStorage.loadTokenFromCache()).accessToken;
 
   /// Retrieve cached OAuth Id Token.
-  Future<String> getIdToken() async =>
+  Future<String?> getIdToken() async =>
       (await _authStorage.loadTokenFromCache()).idToken;
 
   /// Perform Azure AD logout.
@@ -76,7 +78,7 @@ class AadOAuth {
     }
 
     if (token.hasRefreshToken()) {
-      token = await _requestToken.requestRefreshToken(token.refreshToken);
+      token = await _requestToken.requestRefreshToken(token.refreshToken!);
     }
 
     if (!token.hasValidAccessToken()) {
